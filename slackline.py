@@ -68,11 +68,13 @@ def send_slack_message(channel_id, message):
     payload = {"channel": channel_id, "text": message}
     cookies = {"d": D_COOKIE}
 
-    response = requests.post(url, headers=headers, json=payload, cookies=cookies)
+    response = requests.post(
+        url, headers=headers, json=payload, cookies=cookies, timeout=5
+    )
     return response.json()
 
 
-def get_channel_users(channel_id, admins=[]):
+def get_channel_users(channel_id, marker=None, admins=[]):
     """
     Get all users in a channel
 
@@ -96,6 +98,8 @@ def get_channel_users(channel_id, admins=[]):
         "present_first": False,
         "fuzz": 1,
     }
+    if marker:
+        payload["marker"] = marker
     cookies = {"d": D_COOKIE}
     users = []
     response = requests.post(url, headers=headers, json=payload, cookies=cookies)
@@ -131,15 +135,21 @@ def main():
         sys.exit(1)
     channel = sys.argv[1]
     message = sys.argv[2]
+    marker = None
+    if len(sys.argv == 4):
+        marker = sys.argv[3]
     print(f'Message is: "{message}"')
     # admins = get_admins()
-    users = get_channel_users(channel_id=channel)
+    users = get_channel_users(channel_id=channel, marker=marker)
     for user in users:
         real_name = user.get("profile").get("real_name")
         first_name = real_name.split(" ")[0]
         print(f"Sending message to {real_name}")
         formatted_message = message.replace("[name]", first_name)
-        send_slack_message(channel_id=user["id"], message=formatted_message)
+        try:
+            send_slack_message(channel_id=user["id"], message=formatted_message)
+        except Exception as e:
+            print(f"Failed to send message to {real_name}: {e}")
         print(f"Sent message to {real_name}")
         print(f"Sleeping for {SLEEP_TIMEOUT} seconds")
         time.sleep(SLEEP_TIMEOUT)
