@@ -8,6 +8,19 @@ D_COOKIE = os.environ.get("D_COOKIE", os.environ.get("D_TOKEN"))
 SLEEP_TIMEOUT = 1
 
 
+def get_team_name():
+    url = "https://slack.com/api/team.info"
+    cookies = {"d": D_COOKIE}
+    payload = {"token": XOXC_TOKEN}
+    headers = {
+        "Authorization": f"Bearer {XOXC_TOKEN}",
+        "Content-Type": "application/json",
+    }
+    response = requests.get(url, data=payload, cookies=cookies, headers=headers)
+    response_json=response.json()
+    return response_json.get('team').get('name')
+
+
 def get_admins():
     url = "https://slack.com/api/search.modules.people"
     payload = {
@@ -81,7 +94,7 @@ def get_channel_users(channel_id, marker=None, admins=[]):
     Args:
         channel_id (_type_): _description_
     """
-    print(f"Getting channel users from channel id: {channel_id}")
+    print(f"Getting channel users from channel id: {channel_id} (marker: {marker})")
     url = "https://edgeapi.slack.com/cache/T044F8YMNF6/users/list?fp=3c"
     headers = {
         "Authorization": f"Bearer {XOXC_TOKEN}",
@@ -131,15 +144,17 @@ def main():
         print("D_COOKIE is not set, get from browser devtools (COMMUNITY.slack.com)")
         sys.exit(1)
     if len(sys.argv) < 3:
-        print("Usage: python community_spammer.py <channel_id> <message>")
+        print("Usage: python slackline.py <channel_id> <message>")
         sys.exit(1)
     channel = sys.argv[1]
     message = sys.argv[2]
     marker = None
-    if len(sys.argv == 4):
+    if len(sys.argv) == 4:
         marker = sys.argv[3]
     print(f'Message is: "{message}"')
     # admins = get_admins()
+    team_name = get_team_name()
+    print(f"Running in workspace: {team_name}")
     users = get_channel_users(channel_id=channel, marker=marker)
     for user in users:
         real_name = user.get("profile").get("real_name")
@@ -150,7 +165,7 @@ def main():
             send_slack_message(channel_id=user["id"], message=formatted_message)
         except Exception as e:
             print(f"Failed to send message to {real_name}: {e}")
-        print(f"Sent message to {real_name}")
+        print(f"Sent message to {real_name} (from workspace {team_name})")
         print(f"Sleeping for {SLEEP_TIMEOUT} seconds")
         time.sleep(SLEEP_TIMEOUT)
 
