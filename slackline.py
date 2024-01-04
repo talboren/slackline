@@ -2,9 +2,13 @@ import os
 import sys
 import time
 import requests
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 XOXC_TOKEN = os.environ.get("XOXC_TOKEN")
-D_COOKIE = os.environ.get("D_COOKIE", os.environ.get("D_TOKEN"))
+D_COOKIE = os.getenv("D_COOKIE") or os.getenv("D_TOKEN")
 SLEEP_TIMEOUT = 1
 
 
